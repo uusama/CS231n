@@ -1,5 +1,5 @@
 # My CS231n Answers
-for the assigment itself please refer to the course site(http://cs231n.github.io/)
+for the assigment itself please refer to the course [site](http://cs231n.github.io/)
 
 
 ### Contact ###
