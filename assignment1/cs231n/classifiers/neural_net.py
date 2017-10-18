@@ -97,21 +97,10 @@ class TwoLayerNet(object):
         # in the variable loss, which should be a scalar. Use the Softmax           #
         # classifier loss.                                                          #
         #############################################################################
-        f = -np.max(scores, axis=1)
-        print("scores",)
-        print(scores)
-        print("scores)one",)
-        print(np.max(scores, axis=1))
-        print("scores)one",)
-        print(np.max(scores, axis=1)[:, np.newaxis])
         max_scores = np.max(scores, axis=1)[:, np.newaxis]
-        f = -max_scores + scores
-        sum_exp = np.sum(np.exp(f))
-
-        probability = np.exp(f) / sum_exp
-
-        correct_probability = np.exp(f[y]) / sum_exp
-        loss = -np.log(correct_probability)
+        f = np.exp(scores - max_scores)
+        probability = f / np.sum(f, axis=1, keepdims=True)
+        loss = -np.log(probability[np.arange(N), y])
         loss = np.sum(loss) / N + 0.5 * reg * np.sum(W1 * W1) + 0.5 * reg * np.sum(W2 * W2)
         #############################################################################
         #                              END OF YOUR CODE                             #
@@ -124,15 +113,19 @@ class TwoLayerNet(object):
         # and biases. Store the results in the grads dictionary. For example,       #
         # grads['W1'] should store the gradient on W1, and be a matrix of same size #
         #############################################################################
-        # dscores = probability
-        # dscores -= 1
-        # dscores[y] /= N
-        # grads['b2'] = dscores
-        # grads['W2'] = h1.T.dot(dscores)
-        # dz1 = dscores.dot(W2.T)  # # dscores=h2
-        # dz1[z1 <= 0] = 0
-        # grads['b1'] = dz1
-        # grads['W1'] = X.T.dot(dz1)
+        dscores = probability
+        dscores[np.arange(N), y] -= 1
+        dscores /= N
+        grads['b2'] = np.sum(dscores,axis=0)
+        grads['W2'] = h1.T.dot(dscores)
+        dz1 = dscores.dot(W2.T)  # # dscores=h2
+        dz1[z1 <= 0] = 0
+        grads['b1'] = np.sum(dz1,axis=0)
+        grads['W1'] = X.T.dot(dz1)
+
+        # add regularization gradient contribution
+        grads['W2'] += reg * W2
+        grads['W1'] += reg * W1
         #############################################################################
         #                              END OF YOUR CODE                             #
         #############################################################################
