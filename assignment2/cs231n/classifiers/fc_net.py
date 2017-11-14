@@ -79,8 +79,9 @@ class TwoLayerNet(object):
         # TODO: Implement the forward pass for the two-layer net, computing the    #
         # class scores for X and storing them in the scores variable.              #
         ############################################################################
-        h1, cashe1 = affine_relu_forward(X, self.params['W1'], self.params['b1'])
-        scores, cashe2 = affine_relu_forward(h1, self.params['W2'], self.params['b2'])
+        X = X.reshape(X.shape[0], -1)
+        hidden, hidden_cache = affine_relu_forward(X, self.params['W1'], self.params['b1'])
+        scores, scores_cache = affine_forward(hidden, self.params['W2'], self.params['b2'])
 
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -101,9 +102,13 @@ class TwoLayerNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
-        dh1, self.params['W2'], self.params['b2'] = affine_relu_backward(scores, cashe2)
-        dx, self.params['W1'], self.params['b1'] = affine_relu_backward(dh1, cashe1)
-        loss, grads = softmax_loss(out, y)
+        loss, dscores = softmax_loss(scores, y)
+        dhidden, grads['W2'], grads['b2'] = affine_backward(dscores, scores_cache)
+        dx, grads['W1'], grads['b1'] = affine_relu_backward(dhidden, hidden_cache)
+        grads['W1'] += self.reg * self.params['W1']
+        grads['W2'] += self.reg * self.params['W2']
+        loss = loss + 0.5 * self.reg * np.sum(self.params['W1'] * self.params['W1']) + 0.5 * self.reg * np.sum(
+            self.params['W2'] * self.params['W2'])
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -169,7 +174,16 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
-        pass
+        temp_dim = input_dim
+        print(hidden_dims)
+        for i, num_hidden in enumerate(hidden_dims):
+            self.params['W' + str(i + 1)] = weight_scale * np.random.randn(temp_dim, num_hidden)
+            self.params['b' + str(i + 1)] = np.zeros(num_hidden)
+            temp_dim = num_hidden
+        self.params['W' + str(i + 2)] = weight_scale * np.random.randn(temp_dim, num_classes)
+        self.params['b' + str(i + 2)] = np.zeros(num_classes)
+        for k, v in list(self.params.items()):
+            print(('%s: ' % k, v.shape))
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -226,11 +240,23 @@ class FullyConnectedNet(object):
         # self.bn_params[1] to the forward pass for the second batch normalization #
         # layer, etc.                                                              #
         ############################################################################
-        pass
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
-
+        data = {}
+        X = X.reshape(X.shape[0], -1)
+        temp_hidden = X
+        print("range:",self.num_layers)
+        for num in range(self.num_layers -1):
+            num += 1
+            print ("X:",temp_hidden.shape,'W' + str(num), self.params[
+                'W' + str(num)].shape)
+            data['hidden' + str(num)], data['hidden_cache' + str(num)] = affine_relu_forward(temp_hidden, self.params[
+                'W' + str(num)], self.params['b' + str(num)])
+            temp_hidden = data['hidden' + str(num)]
+        data['scores'], data['scores_cache'] = affine_forward(temp_hidden, self.params[
+            'W' + str(num + 1)], self.params['b' + str(num + 1)])
+        # ############################################################################
+        #     #                             END OF YOUR CODE                             #
+        #     ############################################################################
+        #
         # If test mode return early
         if mode == 'test':
             return scores
@@ -249,7 +275,17 @@ class FullyConnectedNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
-        pass
+        loss, dscores = softmax_loss(data['scores'], y)
+        print "ggg:",np.array(data['scores_cache']).shape
+        dx_temp,grads['W' + str(num + 1)], grads['b' + str(num + 1)] = affine_backward(dscores, data['scores_cache'])
+        grads['W' + str(num + 1)] += self.reg * self.params['W' + str(num + 1)]
+
+        for num in reversed(range(self.num_layers -1)):
+            num += 1
+            dx_temp, data['W' + str(num)], data['b' + str(num)] = affine_relu_backward(dx_temp, data[
+                'hidden' + str(num)])
+            grads['W' + str(num)] += self.reg * self.params['W' + str(num)]
+        loss = loss + 0.5 * self.reg * np.sum([np.sum(data['W' + str(num + 1)]**2) for num in range(self.num_layers + 1)])
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
