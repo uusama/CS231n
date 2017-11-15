@@ -182,8 +182,8 @@ class FullyConnectedNet(object):
             temp_dim = num_hidden
         self.params['W' + str(i + 2)] = weight_scale * np.random.randn(temp_dim, num_classes)
         self.params['b' + str(i + 2)] = np.zeros(num_classes)
-        for k, v in list(self.params.items()):
-            print(('%s: ' % k, v.shape))
+        # for k, v in list(self.params.items()):
+        #     print(('%s: ' % k, v.shape))
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -243,11 +243,8 @@ class FullyConnectedNet(object):
         data = {}
         X = X.reshape(X.shape[0], -1)
         temp_hidden = X
-        print("range:",self.num_layers)
-        for num in range(self.num_layers -1):
+        for num in range(self.num_layers - 1):
             num += 1
-            print ("X:",temp_hidden.shape,'W' + str(num), self.params[
-                'W' + str(num)].shape)
             data['hidden' + str(num)], data['hidden_cache' + str(num)] = affine_relu_forward(temp_hidden, self.params[
                 'W' + str(num)], self.params['b' + str(num)])
             temp_hidden = data['hidden' + str(num)]
@@ -276,16 +273,15 @@ class FullyConnectedNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         loss, dscores = softmax_loss(data['scores'], y)
-        print "ggg:",np.array(data['scores_cache']).shape
-        dx_temp,grads['W' + str(num + 1)], grads['b' + str(num + 1)] = affine_backward(dscores, data['scores_cache'])
+        dx_temp, grads['W' + str(num + 1)], grads['b' + str(num + 1)] = affine_backward(dscores, data['scores_cache'])
         grads['W' + str(num + 1)] += self.reg * self.params['W' + str(num + 1)]
 
-        for num in reversed(range(self.num_layers -1)):
+        for num in reversed(range(self.num_layers - 1)):
             num += 1
-            dx_temp, data['W' + str(num)], data['b' + str(num)] = affine_relu_backward(dx_temp, data[
-                'hidden' + str(num)])
+            dx_temp, grads['W' + str(num)], grads['b' + str(num)] = affine_relu_backward(dx_temp, data['hidden_cache' + str(num)])
             grads['W' + str(num)] += self.reg * self.params['W' + str(num)]
-        loss = loss + 0.5 * self.reg * np.sum([np.sum(data['W' + str(num + 1)]**2) for num in range(self.num_layers + 1)])
+        loss = loss + 0.5 * self.reg * np.sum(
+            [np.sum(self.params['W' + str(num + 1)] ** 2) for num in range(self.num_layers)])
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################

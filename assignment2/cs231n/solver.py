@@ -80,6 +80,7 @@ class Solver(object):
     """
 
     def __init__(self, model, data, **kwargs):
+        
         """
         Construct a new Solver instance.
 
