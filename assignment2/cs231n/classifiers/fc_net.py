@@ -248,7 +248,7 @@ class FullyConnectedNet(object):
             data['hidden' + str(num)], data['hidden_cache' + str(num)] = affine_relu_forward(temp_hidden, self.params[
                 'W' + str(num)], self.params['b' + str(num)])
             temp_hidden = data['hidden' + str(num)]
-        data['scores'], data['scores_cache'] = affine_forward(temp_hidden, self.params[
+            scores, data['scores_cache'] = affine_forward(temp_hidden, self.params[
             'W' + str(num + 1)], self.params['b' + str(num + 1)])
         # ############################################################################
         #     #                             END OF YOUR CODE                             #
@@ -272,7 +272,7 @@ class FullyConnectedNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
-        loss, dscores = softmax_loss(data['scores'], y)
+        loss, dscores = softmax_loss(scores, y)
         dx_temp, grads['W' + str(num + 1)], grads['b' + str(num + 1)] = affine_backward(dscores, data['scores_cache'])
         grads['W' + str(num + 1)] += self.reg * self.params['W' + str(num + 1)]
 
@@ -285,5 +285,4 @@ class FullyConnectedNet(object):
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
-
         return loss, grads
