@@ -170,14 +170,39 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variance, storing your result in the running_mean and running_var   #
         # variables.                                                          #
         #######################################################################
-        sample_mean = np.mean(x, axis=0)
-        sample_var = np.var(x, axis=0)
-        print(x.shape, sample_mean.shape, sample_var.shape, (x - sample_mean).shape,
-              np.repeat(np.sqrt(sample_var + eps), 3, axis=0).shape)
-        xhat = (x - sample_mean) / np.repeat(np.sqrt(sample_var + eps), [3,3], axis=0)
-        out = (xhat.dot(gamma)) + beta
-        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
-        running_var = momentum * running_var + (1 - momentum) * sample_var
+        # Forward pass (the code is from https://github.com/cthorey/CS231/blob/master/assignment2/cs231n/layers.py)
+        # Step 1 - shape of mu (D,)
+        mu = 1 / float(N) * np.sum(x, axis=0)
+
+        # Step 2 - shape of xmu (N,D)
+        xmu = x - mu
+
+        # Step 3 - shape of carre (N,D)
+        carre = xmu ** 2
+
+        # Step 4 - shape of var (D,)
+        var = 1 / float(N) * np.sum(carre, axis=0)
+
+        # Step 5 - Shape sqrtvar (D,)
+        sqrtvar = np.sqrt(var + eps)
+
+        # Step 6 - Shape invvar (D,)
+        invvar = 1. / sqrtvar
+
+        # Step 7 - Shape va2 (N,D)
+        va2 = xmu * invvar
+
+        # Step 8 - Shape va3 (N,D)
+        va3 = gamma * va2
+
+        # Step 9 - Shape out (N,D)
+        out = va3 + beta
+
+        running_mean = momentum * running_mean + (1.0 - momentum) * mu
+        running_var = momentum * running_var + (1.0 - momentum) * var
+
+        cache = (mu, xmu, carre, var, sqrtvar, invvar,
+                 va2, va3, gamma, beta, x, bn_param)
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -188,8 +213,12 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
-        x = (x - running_mean) / np.sqrt(running_var + eps)
-        out = x * gamma + beta
+        mu = running_mean
+        var = running_var
+        xhat = (x - mu) / np.sqrt(var + eps)
+        out = gamma * xhat + beta
+        cache = (mu, var, gamma, beta, bn_param)
+
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
@@ -225,7 +254,25 @@ def batchnorm_backward(dout, cache):
     # TODO: Implement the backward pass for batch normalization. Store the    #
     # results in the dx, dgamma, and dbeta variables.                         #
     ###########################################################################
-    pass
+    mu, xmu, carre, var, sqrtvar, invvar, va2, va3, gamma, beta, x, bn_param = cache
+    eps = bn_param.get('eps', 1e-5)
+    N, D = dout.shape
+
+    dbeta = np.sum(dout, axis=0)
+    dva3 = dout
+    dgamma = np.sum(va2 * dva3, axis=0)
+    dva2 = gamma * dva3
+    dinvvar = np.sum(xmu * dva2, axis=0)
+    dxmu = invvar * dva2
+    dsqrtvar = -1. / (sqrtvar ** 2) * dinvvar
+    dvar = 0.5 * (var + eps) ** (-0.5) * dsqrtvar
+
+    # # np.ones to get the requird Shape
+    dcarre = 1 / float(N) * np.ones((carre.shape)) * dvar
+    dxmu += 2 * xmu * dcarre
+    dx = dxmu
+    dmu = - np.sum(dxmu, axis=0)
+    dx += 1 / float(N) * np.ones((dxmu.shape)) * dmu
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
