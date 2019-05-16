@@ -413,7 +413,31 @@ def conv_forward_naive(x, w, b, conv_param):
     # TODO: Implement the convolutional forward pass.                         #
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
-    pass
+
+    # Extract shapes and constants
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape
+    stride = conv_param.get('stride', 1)
+    pad = conv_param.get('pad', 0)
+    # sanity check
+    assert (H + 2 * pad - HH) % stride == 0, 'Sanity Check Status: Conv Layer Failed in Height'
+    assert (W + 2 * pad - WW) % stride == 0, 'Sanity Check Status: Conv Layer Failed in Width'
+
+    H_prime = 1 + (H + 2 * pad - HH) // stride
+    W_prime = 1 + (W + 2 * pad - WW) // stride
+    # Padding adds 'constant_values' across dimensions indecated by 'pad_width'
+    x_pad = np.pad(x, pad_width=((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant', constant_values=0)
+    out = np.zeros((N, F, H_prime, W_prime))
+
+    for n in range(N):
+        for f in range(F):
+            for hp in range(H_prime):
+                for wp in range(W_prime):
+                    out[n, f, hp, wp] = (x_pad[n, :, hp * stride:hp * stride + HH, wp * stride:wp * stride + WW] * w[f,
+                                                                                                                   :, :,
+                                                                                                                   :]).sum() + \
+                                        b[f]
+                    # out[n, f, hp, wp] = (x_pad[n, :, hp * stride:hp * stride + HH, wp * stride:wp * stride + WW] * w[f, :, :,:]).sum() + b[f]
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -438,10 +462,36 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
-    pass
+    x, w, b, conv_param = cache
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape
+    stride = conv_param.get('stride', 1)
+    pad = conv_param.get('pad', 0)
+
+    H_prime = 1 + (H + 2 * pad - HH) // stride
+    W_prime = 1 + (W + 2 * pad - WW) // stride
+    x_pad = np.pad(x, pad_width=((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant', constant_values=0)
+
+    # output
+    dx_pad = np.zeros_like(x_pad)
+    dx = np.zeros_like(x)
+    dw = np.zeros_like(w)
+    db = np.zeros_like(b)
+
+    for n in range(N):
+        for f in range(F):
+            db[f] += dout[n, f].sum()
+
+            for hp in range(H_prime):
+                for wp in range(W_prime):
+                    dw[f] += x_pad[n, :, hp * stride:hp * stride + HH, wp * stride:wp * stride + WW] * dout[
+                        n, f, hp, wp]
+                    x_pad[n, :, hp * stride:hp * stride + HH, wp * stride:wp * stride + WW] += w[f] * dout[n, f, hp, wp]
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
+    dx = dx_pad[:, :, pad:pad+H, pad:pad+W]
+
     return dx, dw, db
 
 
