@@ -148,8 +148,8 @@ class CaptioningRNN(object):
         embedding_in_out, embedding_in_cache = word_embedding_forward(captions_in, W_embed)
 
         # (3)
-        if self.cell_type == 'rnn':
-            h, rnn_cache = rnn_forward(embedding_in_out, h0, Wx, Wh, b)
+        forward_net = {'lstm': lstm_forward, 'rnn': rnn_forward}[self.cell_type]
+        h, cache_rnn = forward_net(embedding_in_out, h0, Wx, Wh, b)
 
         # (4)
         temporal_out, temporal_cache = temporal_affine_forward(h, W_vocab, b_vocab)
@@ -162,7 +162,7 @@ class CaptioningRNN(object):
         dout, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dout, temporal_cache)
         # (3)
         backward_net = {'lstm': lstm_backward, 'rnn': rnn_backward}[self.cell_type]
-        dout, dh0, grads['Wx'], grads['Wh'], grads['b'] = backward_net(dout, rnn_cache)
+        dout, dh0, grads['Wx'], grads['Wh'], grads['b'] = backward_net(dout, cache_rnn)
         # (2)
         grads['W_embed'] = word_embedding_backward(dout, embedding_in_cache)
         # (1)
